@@ -1,0 +1,277 @@
+import { useParams, Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, PieChart, Pie, Cell, Legend,
+} from 'recharts';
+import { qrApi, analyticsApi } from '../lib/api-services';
+import { Input, Select } from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import type { QrStatus, QrEyeShape, QrStyleConfig } from '../types';
+
+const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+const typeLabels: Record<string, string> = {
+  static: 'Estático',
+  dynamic: 'Dinámico',
+};
+
+const statusLabels: Record<string, string> = {
+  active: 'Activo',
+  paused: 'Pausado',
+  expired: 'Expirado',
+  archived: 'Archivado',
+};
+
+const categoryLabels: Record<string, string> = {
+  url: 'URL',
+  text: 'Texto',
+  wifi: 'WiFi',
+  vcard: 'vCard',
+  email: 'Email',
+  phone: 'Teléfono',
+  sms: 'SMS',
+};
+
+export default function QrDetailPage(): JSX.Element {
+  const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+
+  const { data: qr, isLoading } = useQuery({
+    queryKey: ['qr-code', id],
+    queryFn: () => qrApi.get(id!),
+    enabled: !!id,
+  });
+
+  const { data: analytics } = useQuery({
+    queryKey: ['analytics', id],
+    queryFn: () => analyticsApi.summary(id!),
+    enabled: !!id && qr?.type === 'dynamic',
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { title?: string; status?: QrStatus; targetUrl?: string; styleConfig?: Partial<QrStyleConfig> }) =>
+      qrApi.update(id!, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qr-code', id] }),
+  });
+
+  if (isLoading || !qr) {
+    return <div className="text-center text-gray-500">Cargando...</div>;
+  }
+
+  const isDynamic = qr.type === 'dynamic';
+  const shortUrl = qr.dynamicContent
+    ? `${window.location.origin}/r/${qr.dynamicContent.shortCode}`
+    : '';
+
+  const deviceData = analytics?.scansByDevice
+    ? analytics.scansByDevice.map((d) => ({ name: d.key, value: d.count }))
+    : [];
+
+  const browserData = analytics?.scansByBrowser
+    ? analytics.scansByBrowser.map((b) => ({ name: b.key, value: b.count }))
+    : [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link to="/" className="text-brand-600 hover:underline">← Volver</Link>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{qr.title}</h1>
+        <Badge variant={qr.status === 'active' ? 'success' : 'warning'}>{statusLabels[qr.status] ?? qr.status}</Badge>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* QR Image */}
+        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Código QR</h3>
+          <img
+            src={qrApi.imageUrl(qr.id, 'png')}
+            alt={qr.title}
+            className="mx-auto rounded-lg border border-gray-200 dark:border-gray-700"
+          />
+          <div className="mt-4 flex gap-2">
+            <a href={qrApi.imageUrl(qr.id, 'png')} download>
+              <Button size="sm" variant="secondary">PNG</Button>
+            </a>
+            <a href={qrApi.imageUrl(qr.id, 'svg')} download>
+              <Button size="sm" variant="secondary">SVG</Button>
+            </a>
+          </div>
+        </div>
+
+        {/* Details & Edit */}
+        <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+          <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Detalles</h3>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Tipo:</dt>
+              <dd className="font-medium">{typeLabels[qr.type] ?? qr.type}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Categoría:</dt>
+              <dd className="font-medium">{categoryLabels[qr.category] ?? qr.category}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Creado:</dt>
+              <dd className="font-medium">{new Date(qr.createdAt).toLocaleDateString()}</dd>
+            </div>
+            {isDynamic && qr.dynamicContent && (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">URL corta:</dt>
+                  <dd className="font-mono text-xs break-all">{shortUrl}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Destino:</dt>
+                  <dd className="font-mono text-xs break-all">{qr.dynamicContent.targetUrl}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Escaneos:</dt>
+                  <dd className="font-medium">{qr.dynamicContent.scanCount}</dd>
+                </div>
+              </>
+            )}
+          </dl>
+
+          {/* Edit for dynamic */}
+          {isDynamic && (
+            <div className="mt-6 space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+              <h4 className="text-sm font-semibold">Editar</h4>
+              <Input
+                label="Título"
+                defaultValue={qr.title}
+                onBlur={(e) => updateMutation.mutate({ title: e.target.value })}
+              />
+              <Select
+                label="Estado"
+                defaultValue={qr.status}
+                onChange={(e) => updateMutation.mutate({ status: e.target.value as QrStatus })}
+              >
+                <option value="active">Activo</option>
+                <option value="paused">Pausado</option>
+                <option value="expired">Expirado</option>
+              </Select>
+              <Input
+                label="URL Destino"
+                defaultValue={qr.dynamicContent?.targetUrl}
+                onBlur={(e) => updateMutation.mutate({ targetUrl: e.target.value })}
+              />
+              <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
+                <h5 className="mb-2 text-xs font-semibold uppercase text-gray-400">Estilo del QR</h5>
+                <Input
+                  label="Color frontal"
+                  type="color"
+                  defaultValue={qr.styleConfig?.foregroundColor ?? '#000000'}
+                  onBlur={(e) => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, foregroundColor: e.target.value } })}
+                />
+                <Input
+                  label="Color de fondo"
+                  type="color"
+                  defaultValue={qr.styleConfig?.backgroundColor ?? '#FFFFFF'}
+                  onBlur={(e) => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, backgroundColor: e.target.value } })}
+                />
+                <Select
+                  label="Forma"
+                  defaultValue={qr.styleConfig?.eyeShape ?? 'square'}
+                  onChange={(e) => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, eyeShape: e.target.value as QrEyeShape } })}
+                >
+                  <option value="square">Cuadrado</option>
+                  <option value="rounded">Redondeado</option>
+                  <option value="circle">Círculo</option>
+                </Select>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Logo</label>
+                  {qr.styleConfig?.logoUrl && (
+                    <img src={qr.styleConfig.logoUrl} alt="Logo actual" className="mb-2 h-10 w-10 rounded border border-gray-200 object-contain" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, logoUrl: reader.result as string } });
+                      reader.readAsDataURL(file);
+                    }}
+                    className="block w-full text-sm text-gray-500 file:mr-3 file:rounded file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-white hover:file:bg-brand-700"
+                  />
+                  {qr.styleConfig?.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, logoUrl: undefined } })}
+                      className="mt-1 text-sm text-red-500 hover:underline"
+                    >
+                      Quitar logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Analytics */}
+        {isDynamic && (
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Analíticas</h3>
+            <div className="mb-4 text-center">
+              <p className="text-3xl font-bold text-brand-600">{analytics?.totalScans ?? 0}</p>
+              <p className="text-sm text-gray-500">Total de escaneos</p>
+            </div>
+            <a href={analyticsApi.exportCsv(qr.id)}>
+              <Button size="sm" variant="secondary" className="w-full">Exportar CSV</Button>
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Charts */}
+      {isDynamic && analytics && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Escaneos en el tiempo</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics.scansByDate}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Por dispositivo</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={deviceData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {deviceData.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Por navegador</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={browserData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
