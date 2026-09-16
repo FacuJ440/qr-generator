@@ -160,56 +160,51 @@ export class QrCodesService {
     const fgColor = style.foregroundColor ?? '#000000';
     const bgColor = style.backgroundColor ?? '#FFFFFF';
     const errorLevel = (style.errorCorrectionLevel ?? QrErrorCorrectionLevel.M) as 'L' | 'M' | 'Q' | 'H';
-    const eyeShape = style.eyeShape ?? QrEyeShape.SQUARE;
+    const margin = style.margin ?? 2;
 
-    // Map eye shapes to qr-code-styling styles
-    const dotStyleMap: Record<string, 'square' | 'dots' | 'rounded'> = {
-      [QrEyeShape.SQUARE]: 'square',
-      [QrEyeShape.ROUNDED]: 'rounded',
-      [QrEyeShape.CIRCLE]: 'dots',
-    };
-    const eyeStyleMap: Record<string, 'square' | 'dot' | 'extra-rounded'> = {
-      [QrEyeShape.SQUARE]: 'square',
-      [QrEyeShape.ROUNDED]: 'extra-rounded',
-      [QrEyeShape.CIRCLE]: 'dot',
-    };
-
-    const dotStyle = dotStyleMap[eyeShape] ?? 'square';
-    const eyeStyle = eyeStyleMap[eyeShape] ?? 'square';
-
-    // Use qr-code-styling to generate SVG (supports dot/eye shapes)
-    const QRCodeStyling = (await import('qr-code-styling')).default;
-    const qrStyling = new QRCodeStyling({
+    // Use the 'qrcode' library which works in Node.js (qr-code-styling is browser-only)
+    const qrOptions: QRCode.QRCodeRenderersOptions = {
+      errorCorrectionLevel: errorLevel,
+      margin,
       width,
-      height: width,
-      type: 'svg',
-      data: encodedContent || 'https://example.com',
-      dotsOptions: { color: fgColor, type: dotStyle },
-      backgroundOptions: { color: bgColor },
-      cornersSquareOptions: { type: eyeStyle },
-      cornersDotOptions: { type: eyeStyle },
-      qrOptions: { errorCorrectionLevel: errorLevel },
-      image: style.logoUrl || undefined,
-      imageOptions: {
-        crossOrigin: 'anonymous',
-        margin: 4,
-        hideBackgroundDots: true,
-        imageSize: 0.4,
+      color: {
+        dark: fgColor,
+        light: bgColor,
       },
-    });
-
-    // Get raw SVG string
-    const svgData = await qrStyling.getRawData('svg');
-    const svgString = typeof svgData === 'string' ? svgData : (svgData?.toString('utf-8') ?? '');
+    };
 
     if (format === 'svg') {
+      const svgString = await QRCode.toString(encodedContent || 'https://example.com', {
+        ...qrOptions,
+        type: 'svg',
+      });
       return Buffer.from(svgString, 'utf-8');
     }
 
-    // Convert SVG to PNG with sharp
-    let pngBuffer = await sharp(Buffer.from(svgString, 'utf-8'))
-      .png()
-      .toBuffer();
+    // PNG: generate directly with qrcode library
+    const pngBuffer = await QRCode.toBuffer(encodedContent || 'https://example.com', {
+      ...qrOptions,
+      type: 'png',
+    });
+
+    // If a logo is configured, composite it onto the PNG with sharp
+    if (style.logoUrl) {
+      try {
+        const logoBuffer = Buffer.from(style.logoUrl.split(',')[1] ?? '', 'base64');
+        const logoSize = Math.round(width * 0.2);
+        const compositeBuffer = await sharp(pngBuffer)
+          .composite([{
+            input: await sharp(logoBuffer).resize(logoSize, logoSize, { fit: 'inside' }).toBuffer(),
+            gravity: 'center',
+          }])
+          .png()
+          .toBuffer();
+        return compositeBuffer;
+      } catch {
+        // If logo compositing fails, return the QR without logo
+        return pngBuffer;
+      }
+    }
 
     return pngBuffer;
   }

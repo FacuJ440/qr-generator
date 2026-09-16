@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { qrApi } from '../lib/api-services';
-import { Select } from '../components/ui/Input';
+import { Select, Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import type { QrCode, QrType, QrStatus, QrCategory } from '../types';
@@ -63,9 +63,9 @@ export default function DashboardPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mis Códigos QR</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Códigos QR Municipales</h1>
         <Link to="/create">
-          <Button>+ Crear Código QR</Button>
+          <Button className='bg-[#4B0984] hover:bg-[#2e0652]'>+ Crear Código QR</Button>
         </Link>
       </div>
 
@@ -111,9 +111,13 @@ export default function DashboardPage(): JSX.Element {
           </Select>
         </div>
         <div className="flex-1">
-          <Select label="Buscar" value={filters.search ?? ''} onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}>
-            <option value="">Buscar por título...</option>
-          </Select>
+          <Input
+            label="Buscar"
+            type="text"
+            placeholder="Buscar por título..."
+            value={filters.search ?? ''}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
+          />
         </div>
       </div>
 
@@ -141,7 +145,7 @@ export default function DashboardPage(): JSX.Element {
             {data?.items.map((qr: QrCode) => (
               <tr key={qr.id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                  <Link to={`/qr/${qr.id}`} className="hover:text-brand-600">{qr.title}</Link>
+                  <Link to={`/qr/${qr.id}`} className="hover:text-[#4B0984]">{qr.title}</Link>
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={qr.type === 'dynamic' ? 'info' : 'neutral'}>{typeLabels[qr.type] ?? qr.type}</Badge>

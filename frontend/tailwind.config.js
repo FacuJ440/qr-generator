@@ -4,6 +4,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Archivo', 'sans-serif'],
+      },
       colors: {
         brand: {
           50: '#eff6ff',

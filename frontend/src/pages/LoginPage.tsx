@@ -40,7 +40,7 @@ export default function LoginPage(): JSX.Element {
         </form>
         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
           Don't have an account?{' '}
-          <Link to="/register" className="text-brand-600 hover:underline">Register</Link>
+          <Link to="/register" className="text-[#4B0984] hover:underline">Register</Link>
         </p>
       </div>
     </div>

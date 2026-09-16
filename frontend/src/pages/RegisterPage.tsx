@@ -42,7 +42,7 @@ export default function RegisterPage(): JSX.Element {
         </form>
         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
           Already have an account?{' '}
-          <Link to="/login" className="text-brand-600 hover:underline">Login</Link>
+          <Link to="/login" className="text-[#4B0984] hover:underline">Login</Link>
         </p>
       </div>
     </div>

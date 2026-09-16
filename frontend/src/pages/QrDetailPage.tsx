@@ -5,10 +5,12 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { qrApi, analyticsApi } from '../lib/api-services';
+import { createQrStylingInstance, downloadQrPng, downloadQrSvg } from '../lib/qr-styling';
 import { Input, Select } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import type { QrStatus, QrEyeShape, QrStyleConfig } from '../types';
+import { useEffect, useRef, useState } from 'react';
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -37,6 +39,8 @@ const categoryLabels: Record<string, string> = {
 export default function QrDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const qrImageRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const { data: qr, isLoading } = useQuery({
     queryKey: ['qr-code', id],
@@ -55,6 +59,46 @@ export default function QrDetailPage(): JSX.Element {
       qrApi.update(id!, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qr-code', id] }),
   });
+
+  // Render QR with full styling using qr-code-styling (client-side)
+  useEffect(() => {
+    if (!qr || !qrImageRef.current) return;
+
+    const container = qrImageRef.current;
+    let cancelled = false;
+
+    createQrStylingInstance(qr, 300).then((instance) => {
+      if (!cancelled && container) {
+        container.innerHTML = '';
+        instance.append(container);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      if (container) container.innerHTML = '';
+    };
+  }, [qr]);
+
+  const handleDownloadPng = async (): Promise<void> => {
+    if (!qr) return;
+    setDownloading(true);
+    try {
+      await downloadQrPng(qr, `qr-${qr.id}.png`);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadSvg = async (): Promise<void> => {
+    if (!qr) return;
+    setDownloading(true);
+    try {
+      await downloadQrSvg(qr, `qr-${qr.id}.svg`);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isLoading || !qr) {
     return <div className="text-center text-gray-500">Cargando...</div>;
@@ -76,7 +120,7 @@ export default function QrDetailPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/" className="text-brand-600 hover:underline">← Volver</Link>
+        <Link to="/" className="text-[#4B0984] hover:underline">← Volver</Link>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{qr.title}</h1>
         <Badge variant={qr.status === 'active' ? 'success' : 'warning'}>{statusLabels[qr.status] ?? qr.status}</Badge>
       </div>
@@ -85,18 +129,18 @@ export default function QrDetailPage(): JSX.Element {
         {/* QR Image */}
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
           <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Código QR</h3>
-          <img
-            src={qrApi.imageUrl(qr.id, 'png')}
-            alt={qr.title}
-            className="mx-auto rounded-lg border border-gray-200 dark:border-gray-700"
+          <div
+            ref={qrImageRef}
+            className="mx-auto flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700"
+            style={{ width: 300, height: 300 }}
           />
           <div className="mt-4 flex gap-2">
-            <a href={qrApi.imageUrl(qr.id, 'png')} download>
-              <Button size="sm" variant="secondary">PNG</Button>
-            </a>
-            <a href={qrApi.imageUrl(qr.id, 'svg')} download>
-              <Button size="sm" variant="secondary">SVG</Button>
-            </a>
+            <Button size="sm" variant="secondary" onClick={handleDownloadPng} disabled={downloading}>
+              PNG
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleDownloadSvg} disabled={downloading}>
+              SVG
+            </Button>
           </div>
         </div>
 
@@ -217,7 +261,7 @@ export default function QrDetailPage(): JSX.Element {
           <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
             <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Analíticas</h3>
             <div className="mb-4 text-center">
-              <p className="text-3xl font-bold text-brand-600">{analytics?.totalScans ?? 0}</p>
+              <p className="text-3xl font-bold text-[#4B0984]">{analytics?.totalScans ?? 0}</p>
               <p className="text-sm text-gray-500">Total de escaneos</p>
             </div>
             <a href={analyticsApi.exportCsv(qr.id)}>

@@ -68,15 +68,22 @@ export default function CreateQrPage(): JSX.Element {
     }
   }, [type, category, targetUrl, url, text, email, emailSubject, emailBody, phone, smsBody, wifiSsid, wifiPassword, wifiEncryption, vcardName, vcardOrg, vcardPhone, vcardEmail]);
 
-  // Generate preview with qr-code-styling (supports logo + dot/@/types/eye shapes)
+  // Generate preview with qr-code-styling (supports logo + dot/eye shapes)
   useEffect(() => {
     if (!previewRef.current) return;
 
     const dotStyle = dotStyleMap[eyeShape] ?? 'square';
     const eyeStyle = eyeStyleMap[eyeShape] ?? 'square';
+    const container = previewRef.current;
+
+    // Clear any previous preview before rendering
+    container.innerHTML = '';
+    let cancelled = false;
 
     // Dynamic import to avoid SSR issues
     import('qr-code-styling').then(({ default: QRCodeStyling }) => {
+      if (cancelled || !previewRef.current) return;
+
       const qr = new QRCodeStyling({
         width: 250,
         height: 250,
@@ -107,13 +114,17 @@ export default function CreateQrPage(): JSX.Element {
         },
       });
 
-      qr.append(previewRef.current!);
+      if (!cancelled && previewRef.current) {
+        previewRef.current.innerHTML = '';
+        qr.append(previewRef.current);
+      }
     });
 
-    // Cleanup previous preview
+    // Cleanup: cancel pending append and clear container
     return () => {
-      if (previewRef.current) {
-        previewRef.current.innerHTML = '';
+      cancelled = true;
+      if (container) {
+        container.innerHTML = '';
       }
     };
   }, [encodedContent, fgColor, bgColor, errorLevel, eyeShape, logoUrl]);
@@ -266,7 +277,7 @@ export default function CreateQrPage(): JSX.Element {
                   reader.onload = () => setLogoUrl(reader.result as string);
                   reader.readAsDataURL(file);
                 }}
-                className="block w-full text-sm text-gray-500 file:mr-3 file:rounded file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-white hover:file:bg-brand-700"
+                className="block w-full text-sm text-gray-500 file:mr-3 file:rounded file:border-0 file:bg-[#4B0984] file:px-3 file:py-1.5 file:text-white hover:file:bg-[#2e0652]"
               />
               {logoUrl && (
                 <div className="mt-2 flex items-center gap-2">
@@ -280,7 +291,7 @@ export default function CreateQrPage(): JSX.Element {
           {createMutation.isError && (
             <p className="text-sm text-red-500">Error al crear el código QR</p>
           )}
-          <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+          <Button type="submit" className="w-full bg-[#4B0984] hover:bg-[#2e0652]" disabled={createMutation.isPending}>
             {createMutation.isPending ? 'Creando...' : 'Crear Código QR'}
           </Button>
         </form>
