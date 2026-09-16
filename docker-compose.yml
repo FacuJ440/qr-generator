@@ -6,15 +6,13 @@ services:
     container_name: qr-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: qr_generator
-    ports:
-      - '5432:5432'
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-qr_generator}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,21 +25,22 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      NODE_ENV: production
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      DB_DATABASE: qr_generator
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_DATABASE: ${DB_DATABASE:-qr_generator}
       DB_SYNC: 'false'
-      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-change-in-production}
-      JWT_EXPIRES_IN: 15m
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-refresh-secret-change-in-production}
-      JWT_REFRESH_EXPIRES_IN: 7d
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       APP_PORT: 3000
-      BASE_DOMAIN: ${BASE_DOMAIN:-http://localhost:3000}
-      CORS_ORIGIN: http://localhost:4173
-    ports:
-      - '3000:3000'
+      BASE_DOMAIN: ${BASE_DOMAIN:-http://localhost}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    expose:
+      - '3000'
 
   frontend:
     build: ./frontend
@@ -49,10 +48,8 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      VITE_API_URL: http://localhost:3000
     ports:
-      - '4173:4173'
+      - '80:80'
 
 volumes:
   postgres_data:

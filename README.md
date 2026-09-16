@@ -226,8 +226,9 @@ A dynamic QR code encodes a **short URL** that redirects to the real destination
 
 ### Docker (Recommended)
 
+#### Development
+
 ```bash
-# Clone and start everything
 docker-compose up --build
 
 # Services:
@@ -236,6 +237,29 @@ docker-compose up --build
 # - Frontend     →  localhost:5173
 # - Swagger docs →  http://localhost:3000/api/docs
 ```
+
+#### Production
+
+```bash
+# 1. Create your .env file with real secrets
+cp .env.example .env
+# Edit .env — set strong JWT_SECRET, JWT_REFRESH_SECRET, DB_PASSWORD, BASE_DOMAIN, CORS_ORIGIN
+
+# 2. Build and start all services
+docker compose up -d --build
+
+# Services:
+# - PostgreSQL  →  internal network only
+# - Backend API  →  internal network only (proxied via nginx)
+# - Frontend     →  http://localhost (nginx on port 80)
+# - Swagger docs →  disabled in production
+```
+
+The production setup uses:
+- **Multi-stage Docker builds** — smaller images (no dev dependencies in final image)
+- **Nginx** as reverse proxy and static file server for the frontend
+- **Helmet** + **CORS** with configurable origins
+- **Swagger** disabled when `NODE_ENV=production`
 
 ### Manual Setup
 
