@@ -292,7 +292,7 @@ export default function CreateQrPage(): JSX.Element {
             <p className="text-sm text-red-500">Error al crear el código QR</p>
           )}
           <Button type="submit" className="w-full bg-[#4B0984] hover:bg-[#2e0652]" disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Creando...' : 'Crear Código QR'}
+            {createMutation.isPending ? 'Creando...' : '+ Crear Código QR'}
           </Button>
         </form>
 
