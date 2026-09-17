@@ -8,6 +8,7 @@ import { QrDynamicContentEntity } from '../qr-codes/qr-dynamic-content.entity';
 export interface AnalyticsSummary {
   totalScans: number;
   scansByDate: { date: string; count: number }[];
+  scansByHour: { hour: number; count: number }[];
   scansByDevice: { key: string; count: number }[];
   scansByBrowser: { key: string; count: number }[];
   scansByCountry: { key: string; count: number }[];
@@ -61,6 +62,18 @@ export class AnalyticsService {
 
     const scansByDate = scansByDateRaw.map((r) => ({ date: r.date, count: parseInt(r.count, 10) }));
 
+    // Scans by hour (0-23 aggregation)
+    const scansByHourRaw = await this.scanRepo
+      .createQueryBuilder('scan')
+      .select("EXTRACT(HOUR FROM scan.scanned_at)", 'hour')
+      .addSelect('COUNT(*)', 'count')
+      .where('scan.qr_code_id = :qrCodeId', { qrCodeId })
+      .groupBy("EXTRACT(HOUR FROM scan.scanned_at)")
+      .orderBy('hour', 'ASC')
+      .getRawMany<{ hour: string; count: string }>();
+
+    const scansByHour = scansByHourRaw.map((r) => ({ hour: parseInt(r.hour, 10), count: parseInt(r.count, 10) }));
+
     // Scans by device
     const scansByDevice = await this.groupByField(qrCodeId, 'deviceType');
     const scansByBrowser = await this.groupByField(qrCodeId, 'browser');
@@ -70,6 +83,7 @@ export class AnalyticsService {
     return {
       totalScans,
       scansByDate,
+      scansByHour,
       scansByDevice,
       scansByBrowser,
       scansByOs,

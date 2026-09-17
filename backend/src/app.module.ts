@@ -6,6 +6,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { RedirectModule } from './redirect/redirect.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { TagsModule } from './tags/tags.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     QrCodesModule,
     RedirectModule,
     AnalyticsModule,
+    TagsModule,
   ],
 })
 export class AppModule {}

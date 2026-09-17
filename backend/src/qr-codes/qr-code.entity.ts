@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { QrStaticContentEntity } from './qr-static-content.entity';
 import { QrDynamicContentEntity } from './qr-dynamic-content.entity';
+import { TagEntity } from '../tags/tag.entity';
 
 export enum QrType {
   STATIC = 'static',
@@ -75,6 +76,10 @@ export class QrCodeEntity {
   @Column()
   title!: string;
 
+  @Column({ name: 'tag_id', type: 'uuid', nullable: true })
+  @Index()
+  tagId!: string | null;
+
   @Column({ name: 'style_config', type: 'jsonb', default: '{}' })
   styleConfig!: QrStyleConfig;
 
@@ -104,4 +109,8 @@ export class QrCodeEntity {
     cascade: true,
   })
   dynamicContent!: QrDynamicContentEntity | null;
+
+  @ManyToOne(() => TagEntity, { nullable: true, eager: true })
+  @JoinColumn({ name: 'tag_id' })
+  tag!: TagEntity | null;
 }

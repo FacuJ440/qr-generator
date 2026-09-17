@@ -46,6 +46,7 @@ export class QrCodesService {
       type: dto.type,
       category: dto.category,
       title: dto.title,
+      tagId: dto.tagId ?? null,
       styleConfig,
       status: QrStatus.ACTIVE,
     });
@@ -83,12 +84,14 @@ export class QrCodesService {
     if (filters.status) where.status = filters.status;
     if (filters.category) where.category = filters.category;
     if (filters.search) where.title = ILike(`%${filters.search}%`);
+    if (filters.tagId) where.tagId = filters.tagId;
 
     const qb = this.qrRepo
       .createQueryBuilder('qr')
       .where(where)
       .leftJoinAndSelect('qr.staticContent', 'sc')
       .leftJoinAndSelect('qr.dynamicContent', 'dc')
+      .leftJoinAndSelect('qr.tag', 'tag')
       .skip(skip)
       .take(limit);
 
@@ -105,7 +108,7 @@ export class QrCodesService {
   async findOne(id: string): Promise<QrCodeEntity> {
     const qr = await this.qrRepo.findOne({
       where: { id },
-      relations: ['staticContent', 'dynamicContent'],
+      relations: ['staticContent', 'dynamicContent', 'tag'],
     });
     if (!qr) throw new NotFoundException('QR code not found');
     return qr;
@@ -116,6 +119,7 @@ export class QrCodesService {
     const qr = await this.findOne(id);
 
     if (dto.title !== undefined) qr.title = dto.title;
+    if (dto.tagId !== undefined) qr.tagId = dto.tagId || null;
     if (dto.styleConfig) qr.styleConfig = { ...qr.styleConfig, ...dto.styleConfig };
     if (dto.status !== undefined) qr.status = dto.status;
 

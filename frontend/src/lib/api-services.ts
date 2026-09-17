@@ -5,6 +5,7 @@ import type {
   UpdateQrCodeDto,
   QrCodeFilters,
   AnalyticsSummary,
+  Tag,
 } from '../types';
 
 // ---------- QR Codes ----------
@@ -19,6 +20,15 @@ export const qrApi = {
   archive: (id: string) => apiClient.patch<QrCode>(`/qr-codes/${id}/archive`).then((r) => r.data),
   imageUrl: (id: string, format: 'png' | 'svg' = 'png') =>
     `${apiClient.defaults.baseURL}/qr-codes/${id}/image?format=${format}`,
+};
+
+// ---------- Tags ----------
+export const tagApi = {
+  list: () => apiClient.get<Tag[]>('/tags').then((r) => r.data),
+  create: (data: { text: string; color: string }) => apiClient.post<Tag>('/tags', data).then((r) => r.data),
+  update: (id: string, data: { text?: string; color?: string }) =>
+    apiClient.put<Tag>(`/tags/${id}`, data).then((r) => r.data),
+  delete: (id: string) => apiClient.delete(`/tags/${id}`),
 };
 
 // ---------- Analytics ----------

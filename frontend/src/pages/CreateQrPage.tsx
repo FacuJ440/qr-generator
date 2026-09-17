@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { qrApi } from '../lib/api-services';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { qrApi, tagApi } from '../lib/api-services';
 import { Input, Select, TextArea } from '../components/ui/Input';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import type { QrType, QrCategory, QrEyeShape, CreateQrCodeDto } from '../types';
 
 // Map our eye shapes to qr4code=code-styling dot/eye styles
@@ -20,9 +21,14 @@ const eyeStyleMap: Record<string, 'square' | 'dot' | 'extra-rounded'> = {
 
 export default function CreateQrPage(): JSX.Element {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [type, setType] = useState<QrType>('static');
   const [category, setCategory] = useState<QrCategory>('url');
   const [title, setTitle] = useState('');
+  const [selectedTagId, setSelectedTagId] = useState('');
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [newTagText, setNewTagText] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#3b82f6');
   const [targetUrl, setTargetUrl] = useState('');
   const [fgColor, setFgColor] = useState('#000000');
   const [bgColor, setBgColor] = useState('#FFFFFF');
@@ -50,6 +56,22 @@ export default function CreateQrPage(): JSX.Element {
   const createMutation = useMutation({
     mutationFn: (data: CreateQrCodeDto) => qrApi.create(data),
     onSuccess: (qr) => navigate(`/qr/${qr.id}`),
+  });
+
+  const { data: tags } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagApi.list(),
+  });
+
+  const createTagMutation = useMutation({
+    mutationFn: (data: { text: string; color: string }) => tagApi.create(data),
+    onSuccess: (tag) => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      setSelectedTagId(tag.id);
+      setTagModalOpen(false);
+      setNewTagText('');
+      setNewTagColor('#3b82f6');
+    },
   });
 
   // Build encoded content for preview
@@ -136,6 +158,7 @@ export default function CreateQrPage(): JSX.Element {
       type,
       category,
       title,
+      tagId: selectedTagId || undefined,
       styleConfig: {
         foregroundColor: fgColor,
         backgroundColor: bgColor,
@@ -188,6 +211,21 @@ export default function CreateQrPage(): JSX.Element {
           </div>
 
           <Input label="Título" value={title} onChange={(e) => setTitle(e.target.value)} required />
+
+          {/* Etiqueta */}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Select label="Etiqueta" value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)}>
+                <option value="">Sin etiqueta</option>
+                {tags?.map((tag) => (
+                  <option key={tag.id} value={tag.id}>{tag.text}</option>
+                ))}
+              </Select>
+            </div>
+            <Button type="button" variant="secondary" onClick={() => setTagModalOpen(true)}>
+              + Nueva
+            </Button>
+          </div>
 
           {/* Dynamic: target URL */}
           {type === 'dynamic' && (
@@ -306,6 +344,40 @@ export default function CreateQrPage(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {/* Modal: Crear etiqueta */}
+      <Modal open={tagModalOpen} onClose={() => setTagModalOpen(false)} title="Nueva etiqueta">
+        <div className="space-y-4">
+          <Input
+            label="Texto"
+            value={newTagText}
+            onChange={(e) => setNewTagText(e.target.value)}
+            placeholder="Ej: Campaña"
+            required
+          />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Color</label>
+            <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="h-10 w-full rounded" />
+          </div>
+          {newTagText && (
+            <div className="text-center">
+              <span
+                className="inline-block rounded-full px-3 py-1 text-sm font-medium text-white"
+                style={{ backgroundColor: newTagColor }}
+              >
+                {newTagText}
+              </span>
+            </div>
+          )}
+          <Button
+            className="w-full"
+            disabled={!newTagText || createTagMutation.isPending}
+            onClick={() => createTagMutation.mutate({ text: newTagText, color: newTagColor })}
+          >
+            {createTagMutation.isPending ? 'Creando...' : 'Crear etiqueta'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

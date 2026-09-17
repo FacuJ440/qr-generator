@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { qrApi } from '../lib/api-services';
+import { qrApi, tagApi } from '../lib/api-services';
 import { Select, Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -43,6 +43,7 @@ export default function DashboardPage(): JSX.Element {
     status?: QrStatus;
     category?: QrCategory;
     search?: string;
+    tagId?: string;
   }>({});
 
   const { data, isLoading } = useQuery({
@@ -50,13 +51,13 @@ export default function DashboardPage(): JSX.Element {
     queryFn: () => qrApi.list(filters),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => qrApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qr-codes'] }),
+  const { data: tags } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => tagApi.list(),
   });
 
-  const archiveMutation = useMutation({
-    mutationFn: (id: string) => qrApi.archive(id),
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => qrApi.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qr-codes'] }),
   });
 
@@ -119,6 +120,18 @@ export default function DashboardPage(): JSX.Element {
             onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
           />
         </div>
+        <div className="w-48">
+          <Select
+            label="Etiqueta"
+            value={filters.tagId ?? ''}
+            onChange={(e) => setFilters({ ...filters, tagId: e.target.value || undefined })}
+          >
+            <option value="">Todas</option>
+            {tags?.map((tag) => (
+              <option key={tag.id} value={tag.id}>{tag.text}</option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {/* Table */}
@@ -146,6 +159,14 @@ export default function DashboardPage(): JSX.Element {
               <tr key={qr.id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                   <Link to={`/qr/${qr.id}`} className="hover:text-[#4B0984]">{qr.title}</Link>
+                  {qr.tag && (
+                    <span
+                      className="ml-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                      style={{ backgroundColor: qr.tag.color }}
+                    >
+                      {qr.tag.text}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={qr.type === 'dynamic' ? 'info' : 'neutral'}>{typeLabels[qr.type] ?? qr.type}</Badge>
@@ -162,9 +183,6 @@ export default function DashboardPage(): JSX.Element {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => archiveMutation.mutate(qr.id)}>
-                      Archivar
-                    </Button>
                     <Button
                       size="sm"
                       variant="danger"

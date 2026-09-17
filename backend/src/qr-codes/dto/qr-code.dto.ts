@@ -69,6 +69,11 @@ export class CreateQrCodeDto {
   @MaxLength(200)
   title!: string;
 
+  @ApiPropertyOptional({ example: 'uuid-of-tag' })
+  @IsOptional()
+  @IsString()
+  tagId?: string;
+
   @ApiPropertyOptional({ type: QrStyleConfigDto })
   @IsOptional()
   @ValidateNested()
@@ -102,6 +107,11 @@ export class UpdateQrCodeDto {
   @MinLength(1)
   @MaxLength(200)
   title?: string;
+
+  @ApiPropertyOptional({ example: 'uuid-of-tag' })
+  @IsOptional()
+  @IsString()
+  tagId?: string;
 
   @ApiPropertyOptional({ type: QrStyleConfigDto })
   @IsOptional()
@@ -144,6 +154,11 @@ export class QrCodeFilterDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by tag ID' })
+  @IsOptional()
+  @IsString()
+  tagId?: string;
 
   @ApiPropertyOptional({ description: 'Sort by scans descending' })
   @IsOptional()

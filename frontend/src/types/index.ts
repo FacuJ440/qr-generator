@@ -25,12 +25,22 @@ export interface QrDynamicContent {
   scanCount: number;
 }
 
+export interface Tag {
+  id: string;
+  text: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface QrCode {
   id: string;
   userId: string;
   type: QrType;
   category: QrCategory;
   title: string;
+  tagId: string | null;
+  tag: Tag | null;
   styleConfig: QrStyleConfig;
   status: QrStatus;
   isArchived: boolean;
@@ -49,6 +59,7 @@ export interface AuthResponse {
 export interface AnalyticsSummary {
   totalScans: number;
   scansByDate: { date: string; count: number }[];
+  scansByHour: { hour: number; count: number }[];
   scansByDevice: { key: string; count: number }[];
   scansByBrowser: { key: string; count: number }[];
   scansByCountry: { key: string; count: number }[];
@@ -59,6 +70,7 @@ export interface CreateQrCodeDto {
   type: QrType;
   category: QrCategory;
   title: string;
+  tagId?: string;
   styleConfig?: Partial<QrStyleConfig>;
   content?: Record<string, unknown>;
   targetUrl?: string;
@@ -67,6 +79,7 @@ export interface CreateQrCodeDto {
 
 export interface UpdateQrCodeDto {
   title?: string;
+  tagId?: string;
   styleConfig?: Partial<QrStyleConfig>;
   status?: QrStatus;
   targetUrl?: string;
@@ -78,6 +91,7 @@ export interface QrCodeFilters {
   status?: QrStatus;
   category?: QrCategory;
   search?: string;
+  tagId?: string;
   sortByScans?: boolean;
   page?: number;
   limit?: number;

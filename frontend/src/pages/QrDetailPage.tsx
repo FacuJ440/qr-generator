@@ -9,7 +9,7 @@ import { createQrStylingInstance, downloadQrPng, downloadQrSvg } from '../lib/qr
 import { Input, Select } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import type { QrStatus, QrEyeShape, QrStyleConfig } from '../types';
+import type { QrStatus, QrStyleConfig } from '../types';
 import { useEffect, useRef, useState } from 'react';
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -117,6 +117,10 @@ export default function QrDetailPage(): JSX.Element {
     ? analytics.scansByBrowser.map((b) => ({ name: b.key, value: b.count }))
     : [];
 
+  const hourData = analytics?.scansByHour
+    ? analytics.scansByHour.map((h) => ({ hour: `${String(h.hour).padStart(2, '0')}:00`, count: h.count }))
+    : [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -155,6 +159,19 @@ export default function QrDetailPage(): JSX.Element {
             <div className="flex justify-between">
               <dt className="text-gray-500">Categoría:</dt>
               <dd className="font-medium">{categoryLabels[qr.category] ?? qr.category}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Etiqueta:</dt>
+              <dd className="font-medium">
+                {qr.tag ? (
+                  <span
+                    className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                    style={{ backgroundColor: qr.tag.color }}
+                  >
+                    {qr.tag.text}
+                  </span>
+                ) : '—'}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Creado:</dt>
@@ -201,57 +218,6 @@ export default function QrDetailPage(): JSX.Element {
                 defaultValue={qr.dynamicContent?.targetUrl}
                 onBlur={(e) => updateMutation.mutate({ targetUrl: e.target.value })}
               />
-              <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
-                <h5 className="mb-2 text-xs font-semibold uppercase text-gray-400">Estilo del QR</h5>
-                <Input
-                  label="Color frontal"
-                  type="color"
-                  defaultValue={qr.styleConfig?.foregroundColor ?? '#000000'}
-                  onBlur={(e) => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, foregroundColor: e.target.value } })}
-                />
-                <Input
-                  label="Color de fondo"
-                  type="color"
-                  defaultValue={qr.styleConfig?.backgroundColor ?? '#FFFFFF'}
-                  onBlur={(e) => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, backgroundColor: e.target.value } })}
-                />
-                <Select
-                  label="Forma"
-                  defaultValue={qr.styleConfig?.eyeShape ?? 'square'}
-                  onChange={(e) => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, eyeShape: e.target.value as QrEyeShape } })}
-                >
-                  <option value="square">Cuadrado</option>
-                  <option value="rounded">Redondeado</option>
-                  <option value="circle">Círculo</option>
-                </Select>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Logo</label>
-                  {qr.styleConfig?.logoUrl && (
-                    <img src={qr.styleConfig.logoUrl} alt="Logo actual" className="mb-2 h-10 w-10 rounded border border-gray-200 object-contain" />
-                  )}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, logoUrl: reader.result as string } });
-                      reader.readAsDataURL(file);
-                    }}
-                    className="block w-full text-sm text-gray-500 file:mr-3 file:rounded file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-white hover:file:bg-brand-700"
-                  />
-                  {qr.styleConfig?.logoUrl && (
-                    <button
-                      type="button"
-                      onClick={() => updateMutation.mutate({ styleConfig: { ...qr.styleConfig, logoUrl: undefined } })}
-                      className="mt-1 text-sm text-red-500 hover:underline"
-                    >
-                      Quitar logo
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -284,6 +250,19 @@ export default function QrDetailPage(): JSX.Element {
                 <Tooltip />
                 <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} />
               </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+            <h3 className="mb-4 font-semibold text-gray-700 dark:text-gray-300">Escaneos por hora</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={hourData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8b5cf6" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
 
