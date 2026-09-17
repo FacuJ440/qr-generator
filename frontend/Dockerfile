@@ -7,6 +7,8 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# Ensure no .env files interfere with the production build
+RUN rm -f .env .env.local .env.*.local
 RUN npm run build
 
 # ---------- Production stage ----------
