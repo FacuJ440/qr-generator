@@ -141,17 +141,6 @@ export async function downloadQrSvg(qr: QrCode, filename: string): Promise<void>
 
 // ---------- Tarjeta / Card JPG ----------
 
-/** Subtitle suggestions per category */
-const categorySubtitles: Record<string, string> = {
-  url: 'Enlace directo',
-  text: 'Información de texto',
-  wifi: 'Conexión WiFi',
-  vcard: 'Tarjeta de contacto',
-  email: 'Contacto por email',
-  phone: 'Teléfono',
-  sms: 'Mensaje de texto',
-};
-
 /** Tint a hex color by mixing it with white (amount 0..1, 0=white, 1=original) */
 function tintColor(hex: string, amount: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -159,38 +148,6 @@ function tintColor(hex: string, amount: number): string {
   const b = parseInt(hex.slice(5, 7), 16);
   const mix = (c: number) => Math.round(c * amount + 255 * (1 - amount));
   return `#${mix(r).toString(16).padStart(2, '0')}${mix(g).toString(16).padStart(2, '0')}${mix(b).toString(16).padStart(2, '0')}`;
-}
-
-/** Draw a simple category icon (location pin) inside a white circle */
-function drawCategoryIcon(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number): void {
-  // White circle background
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
-
-  // Location pin icon (simplified) in the category color
-  const pinScale = radius * 0.9;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(pinScale / 10, pinScale / 10);
-
-  // Pin body (teardrop)
-  ctx.beginPath();
-  ctx.moveTo(0, -8);
-  ctx.bezierCurveTo(-5, -8, -5, -2, 0, 6);
-  ctx.bezierCurveTo(5, -2, 5, -8, 0, -8);
-  ctx.closePath();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
-
-  // Inner circle (cutout effect — draw in white to match circle bg)
-  ctx.beginPath();
-  ctx.arc(0, -3, 2.2, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
-
-  ctx.restore();
 }
 
 /**
