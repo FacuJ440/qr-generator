@@ -1,116 +1,145 @@
-import { useState, useEffect, useMemo, useRef, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { qrApi, tagApi } from '../lib/api-services';
-import { Input, Select, TextArea } from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import type { QrType, QrCategory, QrEyeShape, CreateQrCodeDto } from '../types';
+import { useState, useEffect, useMemo, useRef, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { qrApi, tagApi } from "../lib/api-services";
+import { Input, Select, TextArea } from "../components/ui/Input";
+import Button from "../components/ui/Button";
+import Modal from "../components/ui/Modal";
+import type { QrType, QrCategory, QrEyeShape, CreateQrCodeDto } from "../types";
 
 // Map our eye shapes to qr4code=code-styling dot/eye styles
-const dotStyleMap: Record<string, 'square' | 'dots' | 'rounded'> = {
-  square: 'square',
-  rounded: 'rounded',
-  circle: 'dots',
+const dotStyleMap: Record<string, "square" | "dots" | "rounded"> = {
+  square: "square",
+  rounded: "rounded",
+  circle: "dots",
 };
-const eyeStyleMap: Record<string, 'square' | 'dot' | 'extra-rounded'> = {
-  square: 'square',
-  rounded: 'extra-rounded',
-  circle: 'dot',
+const eyeStyleMap: Record<string, "square" | "dot" | "extra-rounded"> = {
+  square: "square",
+  rounded: "extra-rounded",
+  circle: "dot",
 };
 
 export default function CreateQrPage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [type, setType] = useState<QrType>('static');
-  const [category, setCategory] = useState<QrCategory>('url');
-  const [title, setTitle] = useState('');
-  const [selectedTagId, setSelectedTagId] = useState('');
+  const [type, setType] = useState<QrType>("static");
+  const [category, setCategory] = useState<QrCategory>("url");
+  const [title, setTitle] = useState("");
+  const [selectedTagId, setSelectedTagId] = useState("");
   const [tagModalOpen, setTagModalOpen] = useState(false);
-  const [newTagText, setNewTagText] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#3b82f6');
-  const [targetUrl, setTargetUrl] = useState('');
-  const [fgColor, setFgColor] = useState('#000000');
-  const [bgColor, setBgColor] = useState('#FFFFFF');
-  const [errorLevel, setErrorLevel] = useState<'L' | 'M' | 'Q' | 'H'>('M');
-  const [eyeShape, setEyeShape] = useState<QrEyeShape>('square');
-  const [logoUrl, setLogoUrl] = useState('');
+  const [newTagText, setNewTagText] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#3b82f6");
+  const [targetUrl, setTargetUrl] = useState("");
+  const [fgColor, setFgColor] = useState("#000000");
+  const [bgColor, setBgColor] = useState("#FFFFFF");
+  const [errorLevel, setErrorLevel] = useState<"L" | "M" | "Q" | "H">("M");
+  const [eyeShape, setEyeShape] = useState<QrEyeShape>("square");
+  const [logoUrl, setLogoUrl] = useState("");
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Content fields
-  const [text, setText] = useState('');
-  const [url, setUrl] = useState('');
-  const [email, setEmail] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailBody, setEmailBody] = useState('');
-  const [phone, setPhone] = useState('');
-  const [smsBody, setSmsBody] = useState('');
-  const [wifiSsid, setWifiSsid] = useState('');
-  const [wifiPassword, setWifiPassword] = useState('');
-  const [wifiEncryption, setWifiEncryption] = useState('WPA');
-  const [vcardName, setVcardName] = useState('');
-  const [vcardOrg, setVcardOrg] = useState('');
-  const [vcardPhone, setVcardPhone] = useState('');
-  const [vcardEmail, setVcardEmail] = useState('');
+  const [text, setText] = useState("");
+  const [url, setUrl] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [phone, setPhone] = useState("");
+  const [smsBody, setSmsBody] = useState("");
+  const [wifiSsid, setWifiSsid] = useState("");
+  const [wifiPassword, setWifiPassword] = useState("");
+  const [wifiEncryption, setWifiEncryption] = useState("WPA");
+  const [vcardName, setVcardName] = useState("");
+  const [vcardOrg, setVcardOrg] = useState("");
+  const [vcardPhone, setVcardPhone] = useState("");
+  const [vcardEmail, setVcardEmail] = useState("");
 
   const createMutation = useMutation({
     mutationFn: (data: CreateQrCodeDto) => qrApi.create(data),
-    onSuccess: (qr) => navigate(`/qr/${qr.id}`),
+    onSuccess: (qr) => {
+      queryClient.invalidateQueries({ queryKey: ["qr-codes"] });
+      navigate(`/qr/${qr.id}`);
+    },
   });
 
   const { data: tags } = useQuery({
-    queryKey: ['tags'],
+    queryKey: ["tags"],
     queryFn: () => tagApi.list(),
   });
 
   const createTagMutation = useMutation({
     mutationFn: (data: { text: string; color: string }) => tagApi.create(data),
     onSuccess: (tag) => {
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
       setSelectedTagId(tag.id);
       setTagModalOpen(false);
-      setNewTagText('');
-      setNewTagColor('#3b82f6');
+      setNewTagText("");
+      setNewTagColor("#3b82f6");
     },
   });
 
   // Build encoded content for preview
   const encodedContent = useMemo((): string => {
-    if (type === 'dynamic') return targetUrl || 'https://example.com';
+    if (type === "dynamic") return targetUrl || "https://example.com";
 
     switch (category) {
-      case 'url': return url || 'https://example.com';
-      case 'text': return text || 'Sample text';
-      case 'email': return `mailto:${email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-      case 'phone': return `tel:${phone}`;
-      case 'sms': return `sms:${phone}?body=${encodeURIComponent(smsBody)}`;
-      case 'wifi': return `WIFI:T:${wifiEncryption};S:${wifiSsid};P:${wifiPassword};H:false;;`;
-      case 'vcard': return `BEGIN:VCARD\nVERSION:3.0\nFN:${vcardName}\nORG:${vcardOrg}\nTEL:${vcardPhone}\nEMAIL:${vcardEmail}\nEND:VCARD`;
-      default: return '';
+      case "url":
+        return url || "https://example.com";
+      case "text":
+        return text || "Sample text";
+      case "email":
+        return `mailto:${email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+      case "phone":
+        return `tel:${phone}`;
+      case "sms":
+        return `sms:${phone}?body=${encodeURIComponent(smsBody)}`;
+      case "wifi":
+        return `WIFI:T:${wifiEncryption};S:${wifiSsid};P:${wifiPassword};H:false;;`;
+      case "vcard":
+        return `BEGIN:VCARD\nVERSION:3.0\nFN:${vcardName}\nORG:${vcardOrg}\nTEL:${vcardPhone}\nEMAIL:${vcardEmail}\nEND:VCARD`;
+      default:
+        return "";
     }
-  }, [type, category, targetUrl, url, text, email, emailSubject, emailBody, phone, smsBody, wifiSsid, wifiPassword, wifiEncryption, vcardName, vcardOrg, vcardPhone, vcardEmail]);
+  }, [
+    type,
+    category,
+    targetUrl,
+    url,
+    text,
+    email,
+    emailSubject,
+    emailBody,
+    phone,
+    smsBody,
+    wifiSsid,
+    wifiPassword,
+    wifiEncryption,
+    vcardName,
+    vcardOrg,
+    vcardPhone,
+    vcardEmail,
+  ]);
 
   // Generate preview with qr-code-styling (supports logo + dot/eye shapes)
   useEffect(() => {
     if (!previewRef.current) return;
 
-    const dotStyle = dotStyleMap[eyeShape] ?? 'square';
-    const eyeStyle = eyeStyleMap[eyeShape] ?? 'square';
+    const dotStyle = dotStyleMap[eyeShape] ?? "square";
+    const eyeStyle = eyeStyleMap[eyeShape] ?? "square";
     const container = previewRef.current;
 
     // Clear any previous preview before rendering
-    container.innerHTML = '';
+    container.innerHTML = "";
     let cancelled = false;
 
     // Dynamic import to avoid SSR issues
-    import('qr-code-styling').then(({ default: QRCodeStyling }) => {
+    import("qr-code-styling").then(({ default: QRCodeStyling }) => {
       if (cancelled || !previewRef.current) return;
 
       const qr = new QRCodeStyling({
         width: 250,
         height: 250,
-        type: 'svg',
-        data: encodedContent || 'https://example.com',
+        type: "svg",
+        data: encodedContent || "https://example.com",
         dotsOptions: {
           color: fgColor,
           type: dotStyle,
@@ -129,7 +158,7 @@ export default function CreateQrPage(): JSX.Element {
         },
         image: logoUrl || undefined,
         imageOptions: {
-          crossOrigin: 'anonymous',
+          crossOrigin: "anonymous",
           margin: 4,
           hideBackgroundDots: true,
           imageSize: 0.4,
@@ -137,7 +166,7 @@ export default function CreateQrPage(): JSX.Element {
       });
 
       if (!cancelled && previewRef.current) {
-        previewRef.current.innerHTML = '';
+        previewRef.current.innerHTML = "";
         qr.append(previewRef.current);
       }
     });
@@ -146,7 +175,7 @@ export default function CreateQrPage(): JSX.Element {
     return () => {
       cancelled = true;
       if (container) {
-        container.innerHTML = '';
+        container.innerHTML = "";
       }
     };
   }, [encodedContent, fgColor, bgColor, errorLevel, eyeShape, logoUrl]);
@@ -170,17 +199,40 @@ export default function CreateQrPage(): JSX.Element {
       },
     };
 
-    if (type === 'dynamic') {
+    if (type === "dynamic") {
       dto.targetUrl = targetUrl;
     } else {
       switch (category) {
-        case 'url': dto.content = { url }; break;
-        case 'text': dto.content = { text }; break;
-        case 'email': dto.content = { email, subject: emailSubject, body: emailBody }; break;
-        case 'phone': dto.content = { phone }; break;
-        case 'sms': dto.content = { phone, body: smsBody }; break;
-        case 'wifi': dto.content = { ssid: wifiSsid, password: wifiPassword, encryption: wifiEncryption }; break;
-        case 'vcard': dto.content = { name: vcardName, org: vcardOrg, phone: vcardPhone, email: vcardEmail }; break;
+        case "url":
+          dto.content = { url };
+          break;
+        case "text":
+          dto.content = { text };
+          break;
+        case "email":
+          dto.content = { email, subject: emailSubject, body: emailBody };
+          break;
+        case "phone":
+          dto.content = { phone };
+          break;
+        case "sms":
+          dto.content = { phone, body: smsBody };
+          break;
+        case "wifi":
+          dto.content = {
+            ssid: wifiSsid,
+            password: wifiPassword,
+            encryption: wifiEncryption,
+          };
+          break;
+        case "vcard":
+          dto.content = {
+            name: vcardName,
+            org: vcardOrg,
+            phone: vcardPhone,
+            email: vcardEmail,
+          };
+          break;
       }
     }
 
@@ -189,17 +241,31 @@ export default function CreateQrPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Crear Código QR</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Crear Código QR
+      </h1>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800"
+        >
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Tipo" value={type} onChange={(e) => setType(e.target.value as QrType)}>
+            <Select
+              label="Tipo"
+              value={type}
+              onChange={(e) => setType(e.target.value as QrType)}
+            >
               <option value="static">Estático</option>
               <option value="dynamic">Dinámico</option>
             </Select>
-            <Select label="Categoría" value={category} onChange={(e) => setCategory(e.target.value as QrCategory)} disabled={type === 'dynamic'}>
+            <Select
+              label="Categoría"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as QrCategory)}
+              disabled={type === "dynamic"}
+            >
               <option value="url">URL</option>
               <option value="text">Texto</option>
               <option value="wifi">WiFi</option>
@@ -210,93 +276,219 @@ export default function CreateQrPage(): JSX.Element {
             </Select>
           </div>
 
-          <Input label="Título" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <Input
+            label="Título"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
 
           {/* Etiqueta */}
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <Select label="Etiqueta" value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)}>
+              <Select
+                label="Etiqueta"
+                value={selectedTagId}
+                onChange={(e) => setSelectedTagId(e.target.value)}
+              >
                 <option value="">Sin etiqueta</option>
                 {tags?.map((tag) => (
-                  <option key={tag.id} value={tag.id}>{tag.text}</option>
+                  <option key={tag.id} value={tag.id}>
+                    {tag.text}
+                  </option>
                 ))}
               </Select>
             </div>
-            <Button type="button" variant="secondary" onClick={() => setTagModalOpen(true)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setTagModalOpen(true)}
+            >
               + Nueva
             </Button>
           </div>
 
           {/* Dynamic: target URL */}
-          {type === 'dynamic' && (
-            <Input label="URL Destino" type="url" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} placeholder="https://example.com" required />
+          {type === "dynamic" && (
+            <Input
+              label="URL Destino"
+              type="url"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              placeholder="https://example.com"
+              required
+            />
           )}
 
           {/* Static: category-specific fields */}
-          {type === 'static' && category === 'url' && (
-            <Input label="URL" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" required />
+          {type === "static" && category === "url" && (
+            <Input
+              label="URL"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com"
+              required
+            />
           )}
-          {type === 'static' && category === 'text' && (
-            <TextArea label="Texto" value={text} onChange={(e) => setText(e.target.value)} rows={4} required />
+          {type === "static" && category === "text" && (
+            <TextArea
+              label="Texto"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={4}
+              required
+            />
           )}
-          {type === 'static' && category === 'email' && (
+          {type === "static" && category === "email" && (
             <>
-              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <Input label="Asunto" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-              <TextArea label="Cuerpo" value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={3} />
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Input
+                label="Asunto"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+              />
+              <TextArea
+                label="Cuerpo"
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                rows={3}
+              />
             </>
           )}
-          {type === 'static' && category === 'phone' && (
-            <Input label="Teléfono" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          {type === "static" && category === "phone" && (
+            <Input
+              label="Teléfono"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
           )}
-          {type === 'static' && category === 'sms' && (
+          {type === "static" && category === "sms" && (
             <>
-              <Input label="Teléfono" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-              <TextArea label="Mensaje" value={smsBody} onChange={(e) => setSmsBody(e.target.value)} rows={3} />
+              <Input
+                label="Teléfono"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+              <TextArea
+                label="Mensaje"
+                value={smsBody}
+                onChange={(e) => setSmsBody(e.target.value)}
+                rows={3}
+              />
             </>
           )}
-          {type === 'static' && category === 'wifi' && (
+          {type === "static" && category === "wifi" && (
             <>
-              <Input label="SSID" value={wifiSsid} onChange={(e) => setWifiSsid(e.target.value)} required />
-              <Input label="Contraseña" value={wifiPassword} onChange={(e) => setWifiPassword(e.target.value)} required />
-              <Select label="Cifrado" value={wifiEncryption} onChange={(e) => setWifiEncryption(e.target.value)}>
+              <Input
+                label="SSID"
+                value={wifiSsid}
+                onChange={(e) => setWifiSsid(e.target.value)}
+                required
+              />
+              <Input
+                label="Contraseña"
+                value={wifiPassword}
+                onChange={(e) => setWifiPassword(e.target.value)}
+                required
+              />
+              <Select
+                label="Cifrado"
+                value={wifiEncryption}
+                onChange={(e) => setWifiEncryption(e.target.value)}
+              >
                 <option value="WPA">WPA/WPA2</option>
                 <option value="WEP">WEP</option>
                 <option value="nopass">Sin Contraseña</option>
               </Select>
             </>
           )}
-          {type === 'static' && category === 'vcard' && (
+          {type === "static" && category === "vcard" && (
             <>
-              <Input label="Nombre" value={vcardName} onChange={(e) => setVcardName(e.target.value)} required />
-              <Input label="Organización" value={vcardOrg} onChange={(e) => setVcardOrg(e.target.value)} />
-              <Input label="Teléfono" type="tel" value={vcardPhone} onChange={(e) => setVcardPhone(e.target.value)} />
-              <Input label="Email" type="email" value={vcardEmail} onChange={(e) => setVcardEmail(e.target.value)} />
+              <Input
+                label="Nombre"
+                value={vcardName}
+                onChange={(e) => setVcardName(e.target.value)}
+                required
+              />
+              <Input
+                label="Organización"
+                value={vcardOrg}
+                onChange={(e) => setVcardOrg(e.target.value)}
+              />
+              <Input
+                label="Teléfono"
+                type="tel"
+                value={vcardPhone}
+                onChange={(e) => setVcardPhone(e.target.value)}
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={vcardEmail}
+                onChange={(e) => setVcardEmail(e.target.value)}
+              />
             </>
           )}
 
           {/* Style */}
           <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
-            <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Estilo</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Estilo
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400">Color frontal</label>
-                <input type="color" value={fgColor} onChange={(e) => setFgColor(e.target.value)} className="h-10 w-full rounded" />
+                <label className="block text-sm text-gray-600 dark:text-gray-400">
+                  Color frontal
+                </label>
+                <input
+                  type="color"
+                  value={fgColor}
+                  onChange={(e) => setFgColor(e.target.value)}
+                  className="h-10 w-full rounded"
+                />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400">Color de fondo</label>
-                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="h-10 w-full rounded" />
+                <label className="block text-sm text-gray-600 dark:text-gray-400">
+                  Color de fondo
+                </label>
+                <input
+                  type="color"
+                  value={bgColor}
+                  onChange={(e) => setBgColor(e.target.value)}
+                  className="h-10 w-full rounded"
+                />
               </div>
             </div>
             <div className="mt-4">
-              <Select label="Forma de los módulos" value={eyeShape} onChange={(e) => setEyeShape(e.target.value as QrEyeShape)}>
+              <Select
+                label="Forma de los módulos"
+                value={eyeShape}
+                onChange={(e) => setEyeShape(e.target.value as QrEyeShape)}
+              >
                 <option value="square">Cuadrado</option>
                 <option value="rounded">Redondeado</option>
                 <option value="circle">Círculo</option>
               </Select>
             </div>
             <div className="mt-4">
-              <Select label="Corrección de errores" value={errorLevel} onChange={(e) => setErrorLevel(e.target.value as 'L' | 'M' | 'Q' | 'H')}>
+              <Select
+                label="Corrección de errores"
+                value={errorLevel}
+                onChange={(e) =>
+                  setErrorLevel(e.target.value as "L" | "M" | "Q" | "H")
+                }
+              >
                 <option value="L">Baja (7%)</option>
                 <option value="M">Media (15%)</option>
                 <option value="Q">Cuartil (25%)</option>
@@ -304,7 +496,9 @@ export default function CreateQrPage(): JSX.Element {
               </Select>
             </div>
             <div className="mt-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Logo (opcional)</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Logo (opcional)
+              </label>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"
@@ -319,8 +513,18 @@ export default function CreateQrPage(): JSX.Element {
               />
               {logoUrl && (
                 <div className="mt-2 flex items-center gap-2">
-                  <img src={logoUrl} alt="Logo" className="h-10 w-10 rounded border border-gray-200 object-contain" />
-                  <button type="button" onClick={() => setLogoUrl('')} className="text-sm text-red-500 hover:underline">Quitar logo</button>
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="h-10 w-10 rounded border border-gray-200 object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLogoUrl("")}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Quitar logo
+                  </button>
                 </div>
               )}
             </div>
@@ -329,24 +533,43 @@ export default function CreateQrPage(): JSX.Element {
           {createMutation.isError && (
             <p className="text-sm text-red-500">Error al crear el código QR</p>
           )}
-          <Button type="submit" className="w-full bg-[#4B0984] hover:bg-[#2e0652]" disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Creando...' : '+ Crear Código QR'}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? "Creando..." : "+ Crear Código QR"}
           </Button>
         </form>
 
         {/* Preview */}
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-          <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Vista previa</h3>
+          <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Vista previa
+          </h3>
           <div className="flex flex-col items-center gap-4">
-            <div ref={previewRef} className="flex items-center justify-center" />
-            {encodedContent && <p className="text-sm text-gray-500 break-all max-w-xs">{encodedContent}</p>}
-            {!encodedContent && <p className="text-gray-400">La vista previa aparecerá aquí</p>}
+            <div
+              ref={previewRef}
+              className="flex items-center justify-center"
+            />
+            {encodedContent && (
+              <p className="text-sm text-gray-500 break-all max-w-xs">
+                {encodedContent}
+              </p>
+            )}
+            {!encodedContent && (
+              <p className="text-gray-400">La vista previa aparecerá aquí</p>
+            )}
           </div>
         </div>
       </div>
 
       {/* Modal: Crear etiqueta */}
-      <Modal open={tagModalOpen} onClose={() => setTagModalOpen(false)} title="Nueva etiqueta">
+      <Modal
+        open={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        title="Nueva etiqueta"
+      >
         <div className="space-y-4">
           <Input
             label="Texto"
@@ -356,8 +579,15 @@ export default function CreateQrPage(): JSX.Element {
             required
           />
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Color</label>
-            <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="h-10 w-full rounded" />
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Color
+            </label>
+            <input
+              type="color"
+              value={newTagColor}
+              onChange={(e) => setNewTagColor(e.target.value)}
+              className="h-10 w-full rounded"
+            />
           </div>
           {newTagText && (
             <div className="text-center">
@@ -372,9 +602,11 @@ export default function CreateQrPage(): JSX.Element {
           <Button
             className="w-full"
             disabled={!newTagText || createTagMutation.isPending}
-            onClick={() => createTagMutation.mutate({ text: newTagText, color: newTagColor })}
+            onClick={() =>
+              createTagMutation.mutate({ text: newTagText, color: newTagColor })
+            }
           >
-            {createTagMutation.isPending ? 'Creando...' : 'Crear etiqueta'}
+            {createTagMutation.isPending ? "Creando..." : "Crear etiqueta"}
           </Button>
         </div>
       </Modal>
