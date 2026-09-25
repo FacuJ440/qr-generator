@@ -10,24 +10,16 @@ const roleLabels: Record<string, string> = {
   admin: 'Administrador',
 };
 
-const planLabels: Record<string, string> = {
-  free: 'Gratis',
-  pro: 'Pro',
-  enterprise: 'Empresa',
-};
-
 export default function AdminDashboardPage(): JSX.Element {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  const [editPlan, setEditPlan] = useState('free');
   const [editRole, setEditRole] = useState('user');
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newPlan, setNewPlan] = useState('free');
   const [newRole, setNewRole] = useState('user');
 
   const { data: users, isLoading } = useQuery({
@@ -36,7 +28,7 @@ export default function AdminDashboardPage(): JSX.Element {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: string; body: { name?: string; email?: string; plan?: string; role?: string } }) =>
+    mutationFn: (data: { id: string; body: { name?: string; email?: string; role?: string } }) =>
       adminApi.updateUser(data.id, data.body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -57,7 +49,6 @@ export default function AdminDashboardPage(): JSX.Element {
       setNewName('');
       setNewEmail('');
       setNewPassword('');
-      setNewPlan('free');
       setNewRole('user');
     },
   });
@@ -66,7 +57,6 @@ export default function AdminDashboardPage(): JSX.Element {
     setEditingId(user.id);
     setEditName(user.name);
     setEditEmail(user.email);
-    setEditPlan(user.plan);
     setEditRole(user.role);
   };
 
@@ -94,7 +84,6 @@ export default function AdminDashboardPage(): JSX.Element {
                 email: newEmail,
                 name: newName,
                 password: newPassword,
-                plan: newPlan,
                 role: newRole,
               });
             }}
@@ -103,11 +92,6 @@ export default function AdminDashboardPage(): JSX.Element {
             <Input label="Nombre" value={newName} onChange={(e) => setNewName(e.target.value)} required />
             <Input label="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required />
             <Input label="Contraseña" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
-            <Select label="Plan" value={newPlan} onChange={(e) => setNewPlan(e.target.value)}>
-              <option value="free">Gratis</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Empresa</option>
-            </Select>
             <Select label="Rol" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
               <option value="user">Usuario</option>
               <option value="admin">Administrador</option>
@@ -128,7 +112,6 @@ export default function AdminDashboardPage(): JSX.Element {
             <tr className="text-left text-gray-500 dark:text-gray-400">
               <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Plan</th>
               <th className="px-4 py-3 font-medium">Rol</th>
               <th className="px-4 py-3 font-medium">Creado</th>
               <th className="px-4 py-3 font-medium">Acciones</th>
@@ -146,13 +129,6 @@ export default function AdminDashboardPage(): JSX.Element {
                       <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
                     </td>
                     <td className="px-4 py-3">
-                      <Select value={editPlan} onChange={(e) => setEditPlan(e.target.value)}>
-                        <option value="free">Gratis</option>
-                        <option value="pro">Pro</option>
-                        <option value="enterprise">Empresa</option>
-                      </Select>
-                    </td>
-                    <td className="px-4 py-3">
                       <Select value={editRole} onChange={(e) => setEditRole(e.target.value)}>
                         <option value="user">Usuario</option>
                         <option value="admin">Administrador</option>
@@ -166,7 +142,7 @@ export default function AdminDashboardPage(): JSX.Element {
                           onClick={() =>
                             updateMutation.mutate({
                               id: user.id,
-                              body: { name: editName, email: editEmail, plan: editPlan, role: editRole },
+                              body: { name: editName, email: editEmail, role: editRole },
                             })
                           }
                         >
@@ -182,11 +158,6 @@ export default function AdminDashboardPage(): JSX.Element {
                   <>
                     <td className="px-4 py-3 font-medium">{user.name}</td>
                     <td className="px-4 py-3 text-gray-500">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700">
-                        {planLabels[user.plan] ?? user.plan}
-                      </span>
-                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-1 text-xs ${
