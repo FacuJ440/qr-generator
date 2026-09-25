@@ -12,6 +12,7 @@ import {
 import { QrStaticContentEntity } from './qr-static-content.entity';
 import { QrDynamicContentEntity } from './qr-dynamic-content.entity';
 import { TagEntity } from '../tags/tag.entity';
+import { UserEntity } from '../users/user.entity';
 
 export enum QrType {
   STATIC = 'static',
@@ -96,7 +97,10 @@ export class QrCodeEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
-  // User relation removed — auth is disabled, all QR codes are public
+  // User relation
+  @ManyToOne(() => UserEntity, (user) => user.qrCodes, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user!: UserEntity | null;
 
   @OneToOne(() => QrStaticContentEntity, (sc) => sc.qrCode, {
     nullable: true,

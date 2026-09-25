@@ -6,7 +6,20 @@ import type {
   QrCodeFilters,
   AnalyticsSummary,
   Tag,
+  AuthResponse,
+  AdminUser,
+  WebtreePage,
+  CreateWebtreePageDto,
+  UpdateWebtreePageDto,
 } from '../types';
+
+// ---------- Auth ----------
+export const authApi = {
+  register: (data: { email: string; name: string; password: string }) =>
+    apiClient.post<AuthResponse>('/auth/register', data).then((r) => r.data),
+  login: (data: { email: string; password: string }) =>
+    apiClient.post<AuthResponse>('/auth/login', data).then((r) => r.data),
+};
 
 // ---------- QR Codes ----------
 export const qrApi = {
@@ -39,4 +52,25 @@ export const analyticsApi = {
       .then((r) => r.data),
   exportCsv: (qrCodeId: string) =>
     `${apiClient.defaults.baseURL}/analytics/${qrCodeId}/export`,
+};
+
+// ---------- Admin ----------
+export const adminApi = {
+  listUsers: () => apiClient.get<AdminUser[]>('/admin/users').then((r) => r.data),
+  createUser: (data: { email: string; name: string; password: string; plan?: string; role?: string }) =>
+    apiClient.post<AdminUser>('/admin/users', data).then((r) => r.data),
+  updateUser: (id: string, data: { name?: string; email?: string; plan?: string; role?: string }) =>
+    apiClient.put<AdminUser>(`/admin/users/${id}`, data).then((r) => r.data),
+  deleteUser: (id: string) => apiClient.delete(`/admin/users/${id}`),
+  setupAdmin: () => apiClient.get<{ message: string }>('/auth/setup-admin').then((r) => r.data),
+};
+
+// ---------- Webtree ----------
+export const webtreeApi = {
+  list: () => apiClient.get<WebtreePage[]>('/webtree').then((r) => r.data),
+  get: (id: string) => apiClient.get<WebtreePage>(`/webtree/${id}`).then((r) => r.data),
+  create: (data: CreateWebtreePageDto) => apiClient.post<WebtreePage>('/webtree', data).then((r) => r.data),
+  update: (id: string, data: UpdateWebtreePageDto) => apiClient.put<WebtreePage>(`/webtree/${id}`, data).then((r) => r.data),
+  delete: (id: string) => apiClient.delete(`/webtree/${id}`),
+  getPublic: (slug: string) => apiClient.get<WebtreePage>(`/p/${slug}`).then((r) => r.data),
 };

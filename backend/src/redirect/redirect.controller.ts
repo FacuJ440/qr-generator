@@ -3,9 +3,11 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RedirectService } from './redirect.service';
 import { Throttle } from '@nestjs/throttler';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Redirect')
 @Controller('r')
+@Public()
 export class RedirectController {
   private readonly logger = new Logger(RedirectController.name);
 

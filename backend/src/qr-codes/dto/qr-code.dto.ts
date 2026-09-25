@@ -90,7 +90,7 @@ export class CreateQrCodeDto {
   // --- Dynamic content (required when type = dynamic) ---
   @ApiPropertyOptional({ example: 'https://example.com/destination' })
   @ValidateIf((o) => o.type === QrType.DYNAMIC)
-  @IsUrl({ require_protocol: true })
+  @IsString()
   @IsOptional()
   targetUrl?: string;
 

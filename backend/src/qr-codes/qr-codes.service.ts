@@ -40,12 +40,13 @@ export class QrCodesService {
   ) {}
 
   // ---------- Create ----------
-  async create(dto: CreateQrCodeDto): Promise<QrCodeEntity> {
+  async create(dto: CreateQrCodeDto, userId: string): Promise<QrCodeEntity> {
     const styleConfig: QrStyleConfig = { ...DEFAULT_STYLE, ...dto.styleConfig };
     const qr = this.qrRepo.create({
       type: dto.type,
       category: dto.category,
       title: dto.title,
+      userId,
       tagId: dto.tagId ?? null,
       styleConfig,
       status: QrStatus.ACTIVE,
@@ -72,13 +73,14 @@ export class QrCodesService {
   }
 
   // ---------- Read ----------
-  async findAll(filters: QrCodeFilterDto): Promise<{ items: QrCodeEntity[]; total: number }> {
+  async findAll(filters: QrCodeFilterDto, userId: string): Promise<{ items: QrCodeEntity[]; total: number }> {
     const page = filters.page ?? 1;
     const limit = Math.min(filters.limit ?? 20, 100);
     const skip = (page - 1) * limit;
 
     const where: FindOptionsWhere<QrCodeEntity> = {
       isArchived: false,
+      userId,
     };
     if (filters.type) where.type = filters.type;
     if (filters.status) where.status = filters.status;
@@ -105,18 +107,19 @@ export class QrCodesService {
     return { items, total };
   }
 
-  async findOne(id: string): Promise<QrCodeEntity> {
+  async findOne(id: string, userId?: string): Promise<QrCodeEntity> {
     const qr = await this.qrRepo.findOne({
       where: { id },
       relations: ['staticContent', 'dynamicContent', 'tag'],
     });
     if (!qr) throw new NotFoundException('QR code not found');
+    if (userId && qr.userId !== userId) throw new ForbiddenException('Access denied');
     return qr;
   }
 
   // ---------- Update ----------
-  async update(id: string, dto: UpdateQrCodeDto): Promise<QrCodeEntity> {
-    const qr = await this.findOne(id);
+  async update(id: string, dto: UpdateQrCodeDto, userId: string): Promise<QrCodeEntity> {
+    const qr = await this.findOne(id, userId);
 
     if (dto.title !== undefined) qr.title = dto.title;
     if (dto.tagId !== undefined) qr.tagId = dto.tagId || null;
@@ -139,13 +142,13 @@ export class QrCodesService {
   }
 
   // ---------- Delete / Archive ----------
-  async delete(id: string): Promise<void> {
-    const qr = await this.findOne(id);
+  async delete(id: string, userId: string): Promise<void> {
+    const qr = await this.findOne(id, userId);
     await this.qrRepo.remove(qr);
   }
 
-  async archive(id: string): Promise<QrCodeEntity> {
-    const qr = await this.findOne(id);
+  async archive(id: string, userId: string): Promise<QrCodeEntity> {
+    const qr = await this.findOne(id, userId);
     qr.isArchived = true;
     qr.status = QrStatus.ARCHIVED;
     return this.qrRepo.save(qr);

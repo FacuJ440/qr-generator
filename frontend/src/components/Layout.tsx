@@ -1,7 +1,15 @@
-import { Outlet, Link } from 'react-router-dom';
-// import Button from './ui/Button';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout(): JSX.Element {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -12,11 +20,30 @@ export default function Layout(): JSX.Element {
             </svg>
             MuniQR
           </Link>
-          {/* <div className="flex items-center gap-4">
-            <Link to="/create">
-              <Button size="sm">+ Nuevo QR</Button>
+          <nav className="flex items-center gap-6">
+            <Link to="/" className="text-sm font-medium text-gray-600 hover:text-[#4B0984] dark:text-gray-300">
+              Dashboard
             </Link>
-          </div> */}
+            <Link to="/webtree" className="text-sm font-medium text-gray-600 hover:text-[#4B0984] dark:text-gray-300">
+              Web tree
+            </Link>
+            {user?.role === 'admin' && (
+              <Link to="/admin" className="text-sm font-medium text-gray-600 hover:text-[#4B0984] dark:text-gray-300">
+                Administración
+              </Link>
+            )}
+            {user && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 dark:text-gray-400">{user.name}</span>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-red-500 hover:text-red-600"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </nav>
         </div>
       </header>
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-8">

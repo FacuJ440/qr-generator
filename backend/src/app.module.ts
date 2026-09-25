@@ -2,11 +2,17 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { RedirectModule } from './redirect/redirect.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TagsModule } from './tags/tags.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { AdminModule } from './admin/admin.module';
+import { WebtreeModule } from './webtree/webtree.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -36,6 +42,13 @@ import { TagsModule } from './tags/tags.module';
     RedirectModule,
     AnalyticsModule,
     TagsModule,
+    AuthModule,
+    UsersModule,
+    AdminModule,
+    WebtreeModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

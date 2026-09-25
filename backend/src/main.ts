@@ -50,21 +50,18 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Swagger documentation (disabled in production)
-  const isProduction = configService.get<string>('NODE_ENV') === 'production';
-  if (!isProduction) {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle('QR Generator API')
-      .setDescription('API for generating and managing static & dynamic QR codes with analytics')
-      .setVersion('1.0')
-      .addBearerAuth(
-        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', name: 'Authorization' },
-        'JWT',
-      )
-      .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document);
-  }
+  // Swagger documentation
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('QR Generator API')
+    .setDescription('API for generating and managing static & dynamic QR codes with analytics')
+    .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', name: 'Authorization' },
+      'JWT',
+    )
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   const port = configService.get<number>('APP_PORT', 3000);
   await app.listen(port);

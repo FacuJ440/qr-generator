@@ -53,7 +53,17 @@ export interface QrCode {
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
-  user: { id: string; email: string; name: string; plan: string };
+  user: { id: string; email: string; name: string; plan: string; role: string };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  plan: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AnalyticsSummary {
@@ -95,4 +105,59 @@ export interface QrCodeFilters {
   sortByScans?: boolean;
   page?: number;
   limit?: number;
+}
+
+// ---------- Webtree ----------
+export interface WebtreeLink {
+  id: string;
+  pageId: string;
+  label: string;
+  url: string;
+  icon: string | null;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebtreePage {
+  id: string;
+  userId: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  themeColor: string;
+  backgroundColor: string;
+  textColor: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  links: WebtreeLink[];
+}
+
+export interface CreateWebtreePageDto {
+  title: string;
+  description?: string;
+  bio?: string;
+  avatarUrl?: string;
+  slug?: string;
+  themeColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  links?: { label: string; url: string; icon?: string; order?: number }[];
+}
+
+export interface UpdateWebtreePageDto {
+  title?: string;
+  description?: string;
+  bio?: string;
+  avatarUrl?: string;
+  slug?: string;
+  themeColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  isActive?: boolean;
+  links?: { label: string; url: string; icon?: string; order?: number; isActive?: boolean }[];
 }
