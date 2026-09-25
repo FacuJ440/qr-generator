@@ -80,7 +80,7 @@ export default function PublicWebtreePage(): JSX.Element {
 
         {/* Footer */}
         <div className="mt-12 text-center text-xs opacity-40">
-          <p>Creado con Muni QR</p>
+          <p>Creado con Muni QR © 2026</p>
         </div>
       </div>
     </div>
